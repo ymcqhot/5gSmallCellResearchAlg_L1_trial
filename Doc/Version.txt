@@ -1,2 +1,2 @@
-5gSmallCellResearchAlg_L1_v1.0.4
+5gSmallCellResearchAlg_L1_v1.0.5
 5gSmallCellCase_L1_v1.0.1
