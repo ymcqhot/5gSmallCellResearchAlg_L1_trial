@@ -137,6 +137,7 @@ for u = 0:2
     for cp = 0:1
         %Initialize for flag of Grid & CP existing
         exitFlag = 0;
+        ssbExitFlag = 0;
 
         %Jump situation of extended CP but u is not 2
         if 1 == cp && u ~= 2
@@ -226,6 +227,7 @@ for u = 0:2
             elseif 3 == simDlPduS.pduType && u == simDlPduS.simSsbPduS.SubcarrierSpacing && cp == 0 %SSB ??Must be normal CP??
                 %Set flag of Grid & CP existing
                 exitFlag = 1;
+                ssbExitFlag = 1;
 
                 %Fetch PDU config
                 simSsbPduS = simDlPduS.simSsbPduS;
@@ -250,9 +252,11 @@ for u = 0:2
             save(refInputAddr, 'simDlRefInputS');
     
             %Save SSB data file
-%             [mantissa, exp] = gi_utilsNorm(dataGridSsb, [1, 1, length(dataGridSsb(:))], [1, 0, 15]);
-%             gi_utilsWriteBin(resourceAddr, 'dlTxSsbDataFreq', 'Grid', u, 'Cp', cp, mantissa, 5, 0, [1, 0, 15]); 
-%             gi_utilsWriteBin(resourceAddr, 'dlTxSsbDataFreqExp', 'Grid', u, 'Cp', cp, exp, 2, 0, [1, 31, 0]);        
+            if 1 == ssbExitFlag
+                [mantissa, exp] = gi_utilsNorm(dataGridSsb, [1, 1, length(dataGridSsb(:))], [1, 0, 15]);
+                gi_utilsWriteBin(resourceAddr, 'dlTxSsbDataFreq', 'Grid', u, 'Cp', cp, mantissa, 5, 0, [1, 0, 15]); 
+                gi_utilsWriteBin(resourceAddr, 'dlTxSsbDataFreqExp', 'Grid', u, 'Cp', cp, exp, 2, 0, [1, 31, 0]);
+            end
             
             %Save data file
             [mantissa, exp] = gi_utilsNorm(dataGrid, [1, 1, length(dataGrid(:))], [1, 0, 15]);
@@ -262,13 +266,15 @@ for u = 0:2
     
         %IFFT and accumulation in time domain
         if 1 == exitFlag
-            %% IFFT + CP, half SC offset recovering in time domain 
-%             [dataTimeSsb] = gi_nrPhySimDlTxSsbTimeDataGen(dataGridSsb, simDlTxSysInterS.numFftPoint, simDlTxSysInterS.scs, simDlTxSysInterS.sampleRate,...
-%                                                           simDlTxSysInterS.slotInterval, simDlTxSysInterS.timeLenSlot, slot, numTxAnt,...
-%                                                           simDlTxGridInterS.numScGrid, simDlTxGridInterS.numSymSlot, simDlTxGridInterS.numFftPoint,...
-%                                                           simDlTxGridInterS.cpSymType, simDlTxGridInterS.cpLenLong, simDlTxGridInterS.cpLenShort,...
-%                                                           simDlTxGridInterS.guardband, simDlTxGridInterS.scs, simDlTxGridInterS.sampleRate,...
-%                                                           simDlTxGridInterS.slotInterval, simDlTxGridInterS.timeLenSlot, simDlRefInputS.ssbHalfScOffset);
+            %% IFFT + CP, half SC offset recovering in time domain
+            if 1 == ssbExitFlag
+                [dataTimeSsb] = gi_nrPhySimDlTxSsbTimeDataGen(dataGridSsb, simDlTxSysInterS.numFftPoint, simDlTxSysInterS.scs, simDlTxSysInterS.sampleRate,...
+                                                              simDlTxSysInterS.slotInterval, simDlTxSysInterS.timeLenSlot, slot, numTxAnt,...
+                                                              simDlTxGridInterS.numScGrid, simDlTxGridInterS.numSymSlot, simDlTxGridInterS.numFftPoint,...
+                                                              simDlTxGridInterS.cpSymType, simDlTxGridInterS.cpLenLong, simDlTxGridInterS.cpLenShort,...
+                                                              simDlTxGridInterS.guardband, simDlTxGridInterS.scs, simDlTxGridInterS.sampleRate,...
+                                                              simDlTxGridInterS.slotInterval, simDlTxGridInterS.timeLenSlot, simDlRefInputS.ssbHalfScOffset);
+            end
         
             %% Time data generation, IFFT + CP
             [dataTimeScs] = gi_nrPhySimTxTimeDataGen(dataGrid, simDlTxSysInterS.numFftPoint, simDlTxSysInterS.scs, simDlTxSysInterS.sampleRate,...
@@ -280,11 +286,18 @@ for u = 0:2
         
     
             %Combine grid data to system data
-            if ~exist('dataTime', 'var')
-%                 dataTime = dataTimeScs + dataTimeSsb;
-                dataTime = dataTimeScs;
+            if 1 == ssbExitFlag
+                if ~exist('dataTime', 'var')
+                    dataTime = dataTimeScs + dataTimeSsb;
+                else
+                    dataTime = dataTime + dataTimeScs + dataTimeSsb;
+                end
             else
-                dataTime = dataTime + dataTimeScs + dataTimeSsb;
+                if ~exist('dataTime', 'var')
+                    dataTime = dataTimeScs;
+                else
+                    dataTime = dataTime + dataTimeScs;
+                end
             end
         end %if, exitFlag
     end %for, cp
